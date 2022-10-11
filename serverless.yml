@@ -62,6 +62,76 @@ provider:
 functions:
   hello:
     handler: handler.hello
+
+plugins:
+  - serverless-s3-sync
+  # make sure to run npm install --save-dev serverless-s3-sync
+  # - this plugin will allow us to upload a set of files (the build react app) to an s3 bucket
+
+custom:
+  bucketName: stripe-web-hooks-1234 # this name needs to be unique for everyone in aws
+  s3Sync:
+    # setting up a set of buckets
+    - bucketName: ${self:custom.bucketName}
+      localDir: frontend/build/ # don't forget to cd into react app folder and run npm run build
+
+resources:
+  Resources:
+    ReactAppBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDoucment: index.html
+    S3AccessPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: ReactAppBucket
+        PolicyDocument:
+          Statements:
+            - Sid: PublicReadGetObject
+              Effect: Allow # similar to IAM role statements
+              Principal: "*" # everyone can access
+              Action:
+                - s3:GetObject
+              Resource: arn:aws:s3:::${self:custom.bucketName}/*
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: ${self:custom.bucketName}.s3.amazonaws.com
+              ID: ReactApp
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPS: 443
+                OriginProtocolPolicy: https-only # how we want these resources to be access
+          Enabled: "true"
+          DefualtRootObject: index.html # where the cloudfront distribution should be pointed at
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+          DefaultChacheBehavior:
+            AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            TargetOriginId: ReactApp
+            ForwardedValues:
+              QueryString: "false"
+              Cookies:
+                Forward: none
+            ViewerProtocolPolicy: redirect-to-https
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details

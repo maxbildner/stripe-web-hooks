@@ -22,6 +22,10 @@
           - This is called **Signing the Message**
       - 3. Then our server runs the incoming stripe request message through a hashing function (also using the same secret key)
         - Our server compares our resulting hash with the incoming message’s hash to see if they are the same. If they are the same we know that the sender of the message is who they say they are (ex. and not a hacker)
+- <ins>**Webhook Exponential Backoff**</ins>
+  - Ex. If your server sends an error back to stripe, stripe will try again to send a request to your server for up to 3 days with increasing time intervals for each failure response. It’s called “exponential” because the web hook provider (ex. stripe) will keep retrying to send a request for example, at first 1 hour, 3 hour, 1 day, …
+  - https://stripe.com/docs/webhooks/best-practices
+
 
 ## STRIPE API WEBHOOK NOTES
 
